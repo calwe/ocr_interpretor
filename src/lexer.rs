@@ -71,7 +71,7 @@ impl Lexer {
             let c = self.input.pop().unwrap();
             match c {
                 '\0' | ' ' | '\n' | '\r' => continue,
-                '=' | '<' | '>' => {
+                '=' | '<' | '>' | '(' | ')' | '"' | '+' | '-' => {
                     let peek = self.peek_char();
                     match peek {
                         '=' => {
@@ -97,6 +97,13 @@ impl Lexer {
             "> " => self.push_symbol(SymbolKind::Greater),
             "<=" => self.push_symbol(SymbolKind::LessEquals),
             "< " => self.push_symbol(SymbolKind::Less),
+            "( " => self.push_symbol(SymbolKind::LeftBracket),
+            ") " => self.push_symbol(SymbolKind::RightBracket),
+            "\" " => self.push_symbol(SymbolKind::Quote),
+            "+ " => self.push_symbol(SymbolKind::Plus),
+            "+=" => self.push_symbol(SymbolKind::PlusEqual),
+            "- " => self.push_symbol(SymbolKind::Minus),
+            "-=" => self.push_symbol(SymbolKind::MinusEqual),
             _ => unimplemented!(),
         }
     }
@@ -159,6 +166,50 @@ mod tests {
             vec![
                 TokenKind::Symbol(SymbolKind::LessEquals),
                 TokenKind::Symbol(SymbolKind::Less)
+            ]
+        );
+    }
+
+    #[test]
+    fn brackets() {
+        let mut lexer = Lexer::new("()(()".to_string());
+        lexer.lex();
+        assert_eq!(
+            lexer.token_kinds(),
+            vec![
+                TokenKind::Symbol(SymbolKind::LeftBracket),
+                TokenKind::Symbol(SymbolKind::RightBracket),
+                TokenKind::Symbol(SymbolKind::LeftBracket),
+                TokenKind::Symbol(SymbolKind::LeftBracket),
+                TokenKind::Symbol(SymbolKind::RightBracket),
+            ]
+        );
+    }
+
+    #[test]
+    fn quotes() {
+        let mut lexer = Lexer::new("\"\"".to_string());
+        lexer.lex();
+        assert_eq!(
+            lexer.token_kinds(),
+            vec![
+                TokenKind::Symbol(SymbolKind::Quote),
+                TokenKind::Symbol(SymbolKind::Quote),
+            ]
+        );
+    }
+
+    #[test]
+    fn arithmetic() {
+        let mut lexer = Lexer::new("+= + - -=".to_string());
+        lexer.lex();
+        assert_eq!(
+            lexer.token_kinds(),
+            vec![
+                TokenKind::Symbol(SymbolKind::PlusEqual),
+                TokenKind::Symbol(SymbolKind::Plus),
+                TokenKind::Symbol(SymbolKind::Minus),
+                TokenKind::Symbol(SymbolKind::MinusEqual),
             ]
         );
     }
