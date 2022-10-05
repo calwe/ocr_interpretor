@@ -1,4 +1,4 @@
-type Num = u64;
+use crate::Num;
 
 #[derive(Clone, Debug, PartialEq)]
 pub enum TokenKind {
