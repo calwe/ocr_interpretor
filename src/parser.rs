@@ -22,9 +22,58 @@ impl Parser {
     fn parse_block(&mut self) -> Node {
         let mut nodes = Vec::new();
         while !self.tokens.is_empty() {
-            nodes.push(self.parse_assign());
+            let mut token_clone = self.tokens.clone();
+            match token_clone.pop().unwrap().kind {
+                TokenKind::Ident(_) => {
+                    match token_clone
+                        .pop()
+                        .expect("ident unsupported on its own")
+                        .kind
+                    {
+                        TokenKind::Symbol(SymbolKind::Equals) => {
+                            nodes.push(self.parse_assign());
+                        }
+                        TokenKind::Symbol(SymbolKind::LeftBracket) => {
+                            nodes.push(self.parse_func_call());
+                        }
+                        _ => unimplemented!("unimplemented ident"),
+                    }
+                }
+                _ => unimplemented!("unimplemneted parse branch"),
+            }
         }
         Node::Block(nodes)
+    }
+
+    fn parse_func_call(&mut self) -> Node {
+        let token = self.get_token();
+        let ident = match token.kind {
+            TokenKind::Ident(x) => x,
+            _ => panic!("assignment must start with ident!"),
+        };
+        // TODO: parse arguments
+        let mut args = Vec::new();
+        match self.get_token().kind {
+            TokenKind::Symbol(SymbolKind::LeftBracket) => {
+                match self.peek_token().unwrap().kind {
+                    TokenKind::Symbol(SymbolKind::RightBracket) => (),
+                    _ => args.push(self.parse_arg()), // TODO: Multiple args, string args
+                }
+            }
+            _ => panic!("Must have bracket after function!"),
+        };
+        self.get_token(); // consume final bracket
+        Node::FuncCall { ident, args }
+    }
+
+    fn parse_arg(&mut self) -> Node {
+        match self.peek_token().unwrap().kind {
+            TokenKind::String(x) => {
+                self.get_token(); // consume token
+                Node::Primary(Value::String(x))
+            }
+            _ => self.parse_expr(),
+        }
     }
 
     fn parse_assign(&mut self) -> Node {
@@ -69,10 +118,10 @@ impl Parser {
     }
 
     fn parse_factor(&mut self) -> Node {
-        // TODO: Brackets
         let token = self.get_token();
         match token.kind {
             TokenKind::Number(x) => Node::Primary(Value::Number(x)),
+            TokenKind::Ident(x) => Node::VariableRef(x),
             TokenKind::Symbol(SymbolKind::LeftBracket) => {
                 let expr = self.parse_expr();
                 // TODO: verify bracket (needs error handling)

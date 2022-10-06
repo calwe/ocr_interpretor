@@ -1,6 +1,12 @@
-<block>     ::= <assign> | <assign> <block>
+<block>     ::= (<assign>)* (<func_call>)*
 
 <assign>    ::= <ident> "=" <expr>
 <expr>      ::= <term> "+" <expr> | <term> "-" <expr> | <term>
 <term>      ::= <factor> "*" <term> | <factor> "/" <term> | <factor>
-<factor>    ::= NUMBER | "(" <expr> ")"
+<factor>    ::= NUMBER | <ident> | "(" <expr> ")"
+
+<func_call> ::= <ident> "(" <arg> ("," <arg>)* ")"
+<arg>       ::= <expr> | <string>
+
+<string>    ::= " STRING "
+<ident>     ::= STRING

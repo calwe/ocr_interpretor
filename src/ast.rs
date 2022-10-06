@@ -16,6 +16,7 @@ pub enum Node {
         ident: String,
         args: Vec<Node>,
     },
+    VariableRef(String),
     BinaryExpr {
         left: Box<Node>,
         operator: Op,

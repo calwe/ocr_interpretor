@@ -2,9 +2,9 @@ use ocr_language::{lexer::Lexer, parser::Parser};
 
 pub fn main() {
     let input = r#"
-attempts = 10 + 8
-test = 7
-long = 10 + (9 - 10) + 18
+attempts = 5
+test = attempts - 18
+print("hello world!")
 "#;
 
     let mut lexer = Lexer::new(input.to_string());
