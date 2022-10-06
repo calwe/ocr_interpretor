@@ -1,4 +1,4 @@
-use crate::{ast::Node, Value};
+use crate::{ast::Node, Num, Op, Value};
 
 pub struct Interpretor {
     ast: Box<Node>,
@@ -41,6 +41,32 @@ impl Interpretor {
         }
     }
 
+    fn run_expr(&mut self, node: Node) -> Num {
+        let (left, op, right) = match node {
+            Node::BinaryExpr {
+                left,
+                operator,
+                right,
+            } => (left, operator, right),
+            _ => panic!("Not an expression"),
+        };
+
+        let left_val = self.get_expr_val(*left);
+        let right_val = self.get_expr_val(*right);
+        match op {
+            Op::Plus => left_val + right_val,
+            Op::Minus => left_val - right_val,
+        }
+    }
+
+    fn get_expr_val(&mut self, node: Node) -> Num {
+        match node {
+            Node::BinaryExpr { .. } => self.run_expr(node),
+            Node::Primary(Value::Number(x)) => x,
+            _ => unimplemented!("Unsupported value for expression side"),
+        }
+    }
+
     fn builtin_print(&mut self, args: Vec<Node>) {
         // verify arguments
         if args.len() == 0 {
@@ -53,6 +79,10 @@ impl Interpretor {
         match &args[0] {
             Node::Primary(x) => {
                 println!("{}", x);
+            }
+            Node::BinaryExpr { .. } => {
+                let expr = self.run_expr(args[0].clone());
+                println!("{}", expr);
             }
             _ => unimplemented!("cannot print {:?}", args[0]),
         }

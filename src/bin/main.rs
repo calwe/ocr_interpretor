@@ -1,7 +1,8 @@
 use ocr_language::{interpretor::Interpretor, lexer::Lexer, parser::Parser};
 
 pub fn main() {
-    let input = r#"print("hello ocr!")"#;
+    let input = r#"print("Hello ocr!")
+print(3 + 4)"#;
 
     println!("Input program:");
     println!("{}", input);
