@@ -39,7 +39,7 @@ impl Parser {
                         _ => unimplemented!("unimplemented ident"),
                     }
                 }
-                _ => unimplemented!("unimplemneted parse branch"),
+                _ => unimplemented!("unimplemneted parse branch: {:?}", self.get_token().kind),
             }
         }
         Node::Block(nodes)
@@ -124,11 +124,25 @@ impl Parser {
     }
 
     fn parse_factor(&mut self) -> Node {
-        let token = self.get_token();
+        let token = self.peek_token().unwrap();
         match token.kind {
-            TokenKind::Number(x) => Node::Primary(Value::Number(x)),
-            TokenKind::Ident(x) => Node::VariableRef(x),
+            TokenKind::Number(x) => {
+                self.get_token();
+                Node::Primary(Value::Number(x))
+            }
+            TokenKind::Ident(x) => {
+                let mut peekpeek = self.tokens.clone();
+                peekpeek.pop();
+                if let Some(x) = peekpeek.pop() {
+                    if x.kind == TokenKind::Symbol(SymbolKind::LeftBracket) {
+                        return self.parse_func_call();
+                    }
+                }
+                self.get_token();
+                Node::VariableRef(x)
+            }
             TokenKind::Symbol(SymbolKind::LeftBracket) => {
+                self.get_token();
                 let expr = self.parse_expr();
                 // TODO: verify bracket (needs error handling)
                 self.get_token(); // consume end bracket

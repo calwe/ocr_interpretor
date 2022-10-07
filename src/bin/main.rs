@@ -1,11 +1,11 @@
 use ocr_language::{interpretor::Interpretor, lexer::Lexer, parser::Parser};
 
 pub fn main() {
+    // TODO: Parse function with return value
     let input = r#"print("Hello ocr!")
-name = "john"
+name = input("what is your name? ")
 print("you are")
 print(name)"#;
-
     println!("Input program:");
     println!("{}", input);
 

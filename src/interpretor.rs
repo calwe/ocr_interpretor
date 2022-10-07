@@ -1,3 +1,5 @@
+use std::io::{self, Write};
+
 use crate::{ast::Node, symbol_table::SymbolTable, Num, Op, Value};
 
 pub struct Interpretor {
@@ -35,14 +37,18 @@ impl Interpretor {
         }
     }
 
-    fn run_func(&mut self, node: Node) {
+    fn run_func(&mut self, node: Node) -> Option<Value> {
         let (ident, args) = match node {
             Node::FuncCall { ident, args } => (ident, args),
             _ => panic!("Not a function"),
         };
         // built in functions
         match ident.as_str() {
-            "print" => self.builtin_print(args),
+            "print" => {
+                self.builtin_print(args);
+                None
+            }
+            "input" => Some(self.builtin_input(args)),
             _ => todo!("Implement custom functions"),
         }
     }
@@ -58,6 +64,10 @@ impl Interpretor {
                 let rvalue = self.run_expr(*rexpr);
                 self.symbol_table
                     .assign_variable(ident, Value::Number(rvalue));
+            }
+            Node::FuncCall { .. } => {
+                let rvalue = self.run_func(*rexpr).expect("function has no return value");
+                self.symbol_table.assign_variable(ident, rvalue);
             }
             Node::Primary(x) => self.symbol_table.assign_variable(ident, x),
             _ => panic!("unsupported rvalue for assign"),
@@ -120,5 +130,34 @@ impl Interpretor {
             }
             _ => unimplemented!("cannot print {:?}", args[0]),
         }
+    }
+
+    fn builtin_input(&mut self, args: Vec<Node>) -> Value {
+        if args.len() > 1 {
+            panic!("print cannot accept more than 1 arg!");
+        }
+
+        let mut input = String::new();
+        if args.len() == 1 {
+            match &args[0] {
+                Node::Primary(x) => {
+                    print!("{}", x);
+                }
+                Node::BinaryExpr { .. } => {
+                    let expr = self.run_expr(args[0].clone());
+                    print!("{}", expr);
+                }
+                Node::VariableRef(x) => {
+                    let var = self.symbol_table.get_variable(x.to_string());
+                    print!("{}", var);
+                }
+                _ => unimplemented!("cannot print {:?}", args[0]),
+            }
+            let _ = io::stdout().flush();
+        }
+        io::stdin()
+            .read_line(&mut input)
+            .expect("Error reading from STDIN");
+        Value::String(input)
     }
 }
