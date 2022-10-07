@@ -2,7 +2,9 @@ use ocr_language::{interpretor::Interpretor, lexer::Lexer, parser::Parser};
 
 pub fn main() {
     let input = r#"print("Hello ocr!")
-print(3 + 4)"#;
+name = "john"
+print("you are")
+print(name)"#;
 
     println!("Input program:");
     println!("{}", input);

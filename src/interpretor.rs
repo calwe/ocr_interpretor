@@ -1,12 +1,16 @@
-use crate::{ast::Node, Num, Op, Value};
+use crate::{ast::Node, symbol_table::SymbolTable, Num, Op, Value};
 
 pub struct Interpretor {
     ast: Box<Node>,
+    symbol_table: SymbolTable,
 }
 
 impl Interpretor {
     pub fn new(ast: Box<Node>) -> Self {
-        Self { ast }
+        Self {
+            ast,
+            symbol_table: SymbolTable::new(),
+        }
     }
 
     pub fn run(&mut self) {
@@ -22,9 +26,11 @@ impl Interpretor {
 
     fn run_node(&mut self, node: Node) {
         match node {
+            // TODO: Variables - requires symbol table
             Node::FuncCall { .. } => {
                 self.run_func(node);
             }
+            Node::Assign { .. } => self.run_assign(node),
             _ => todo!("more node types"),
         }
     }
@@ -38,6 +44,23 @@ impl Interpretor {
         match ident.as_str() {
             "print" => self.builtin_print(args),
             _ => todo!("Implement custom functions"),
+        }
+    }
+
+    fn run_assign(&mut self, node: Node) {
+        let (ident, rexpr) = match node {
+            Node::Assign { ident, value } => (ident, value),
+            _ => panic!("Not an assign"),
+        };
+        // get value to put in symbol table
+        match *rexpr {
+            Node::BinaryExpr { .. } => {
+                let rvalue = self.run_expr(*rexpr);
+                self.symbol_table
+                    .assign_variable(ident, Value::Number(rvalue));
+            }
+            Node::Primary(x) => self.symbol_table.assign_variable(ident, x),
+            _ => panic!("unsupported rvalue for assign"),
         }
     }
 
@@ -62,6 +85,13 @@ impl Interpretor {
     fn get_expr_val(&mut self, node: Node) -> Num {
         match node {
             Node::BinaryExpr { .. } => self.run_expr(node),
+            Node::VariableRef(x) => {
+                let var = self.symbol_table.get_variable(x);
+                match var {
+                    Value::Number(x) => x,
+                    _ => panic!("Expression only supports numbers"),
+                }
+            }
             Node::Primary(Value::Number(x)) => x,
             _ => unimplemented!("Unsupported value for expression side"),
         }
@@ -83,6 +113,10 @@ impl Interpretor {
             Node::BinaryExpr { .. } => {
                 let expr = self.run_expr(args[0].clone());
                 println!("{}", expr);
+            }
+            Node::VariableRef(x) => {
+                let var = self.symbol_table.get_variable(x.to_string());
+                println!("{}", var);
             }
             _ => unimplemented!("cannot print {:?}", args[0]),
         }

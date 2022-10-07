@@ -27,3 +27,4 @@ pub mod ast;
 pub mod interpretor;
 pub mod lexer;
 pub mod parser;
+pub mod symbol_table;

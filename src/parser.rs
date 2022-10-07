@@ -84,7 +84,13 @@ impl Parser {
         };
         // TODO: Verify equals
         self.get_token(); // consume '='
-        let expr = self.parse_expr();
+        let expr = match self.peek_token().unwrap().kind {
+            TokenKind::String(x) => {
+                self.get_token(); // consume string
+                Node::Primary(Value::String(x))
+            }
+            _ => self.parse_expr(),
+        };
         Node::Assign {
             ident,
             value: Box::new(expr),
