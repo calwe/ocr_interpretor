@@ -23,7 +23,26 @@ pub enum Op {
     Minus,
 }
 
+#[derive(Clone, Copy, Debug, PartialEq)]
+pub struct Position {
+    pub line: usize,
+    pub col: usize,
+}
+
+impl Position {
+    pub fn new(line: usize, col: usize) -> Self {
+        Self { line, col }
+    }
+}
+
+impl Display for Position {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        write!(f, "({}, {})", self.line, self.col)
+    }
+}
+
 pub mod ast;
+pub mod error;
 pub mod interpretor;
 pub mod lexer;
 pub mod parser;

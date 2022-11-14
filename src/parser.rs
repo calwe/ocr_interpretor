@@ -1,29 +1,33 @@
 use crate::{
     ast::Node,
+    error::ParserError,
     lexer::{SymbolKind, Token, TokenKind},
     Op, Value,
 };
 
 pub struct Parser {
     tokens: Vec<Token>,
+    input: String,
 }
 
 impl Parser {
-    pub fn new(tokens: Vec<Token>) -> Self {
+    pub fn new(tokens: Vec<Token>, input: String) -> Self {
         Self {
             tokens: tokens.into_iter().rev().collect(), // reverse tokens, as we pop from the end
+            input,
         }
     }
 
-    pub fn parse(&mut self) -> Box<Node> {
-        Box::new(self.parse_block())
+    pub fn parse(&mut self) -> Result<Node, ParserError> {
+        self.parse_block()
     }
 
-    fn parse_block(&mut self) -> Node {
+    fn parse_block(&mut self) -> Result<Node, ParserError> {
         let mut nodes = Vec::new();
         while !self.tokens.is_empty() {
             let mut token_clone = self.tokens.clone();
-            match token_clone.pop().unwrap().kind {
+            let token = token_clone.pop().unwrap();
+            match token.kind {
                 TokenKind::Ident(_) => {
                     match token_clone
                         .pop()
@@ -39,10 +43,10 @@ impl Parser {
                         _ => unimplemented!("unimplemented ident"),
                     }
                 }
-                _ => unimplemented!("unimplemneted parse branch: {:?}", self.get_token().kind),
+                _ => return Err(ParserError::InvalidTokenInBlock(token, self.input.clone())),
             }
         }
-        Node::Block(nodes)
+        Ok(Node::Block(nodes))
     }
 
     fn parse_func_call(&mut self) -> Node {

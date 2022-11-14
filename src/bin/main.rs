@@ -2,17 +2,18 @@ use ocr_language::{interpretor::Interpretor, lexer::Lexer, parser::Parser};
 
 pub fn main() {
     // TODO: Parse function with return value
-    let input = r#"print("Hello ocr!")
-name = input("what is your name? ")
-print("you are")
-print(name)"#;
+    let input = r#"print("poo") = print"#;
     println!("Input program:");
     println!("{}", input);
 
     println!();
 
     let mut lexer = Lexer::new(input.to_string());
-    lexer.lex();
+    if let Err(e) = lexer.lex() {
+        println!("Error while lexing:");
+        println!("{}", e);
+        return;
+    }
     let tokens = lexer.tokens;
 
     println!("Tokens:");
@@ -23,13 +24,19 @@ print(name)"#;
     println!();
 
     println!("AST:");
-    let mut parser = Parser::new(tokens);
-    let ast = parser.parse();
+    let mut parser = Parser::new(tokens, input.clone().to_string());
+    let ast = match parser.parse() {
+        Ok(ast) => ast,
+        Err(e) => {
+            println!("{}", e);
+            return;
+        }
+    };
     println!("{:#?}", ast);
 
     println!();
 
     println!("Running program:");
-    let mut interpretor = Interpretor::new(ast);
+    let mut interpretor = Interpretor::new(Box::new(ast));
     interpretor.run();
 }
