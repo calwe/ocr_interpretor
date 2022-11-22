@@ -1,8 +1,11 @@
 use ocr_language::{interpretor::Interpretor, lexer::Lexer, parser::Parser};
 
 pub fn main() {
+    env_logger::init();
+
     // TODO: Parse function with return value
-    let input = r#"print("poo") = print"#;
+    let input = r#"boolean = 5 < 6
+print(boolean)"#;
     println!("Input program:");
     println!("{}", input);
 

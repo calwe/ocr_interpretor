@@ -1,11 +1,14 @@
 use std::fmt::Display;
 
+use lexer::TokenKind;
+
 pub type Num = u64;
 
 #[derive(Clone, Debug, PartialEq)]
 pub enum Value {
     Number(Num),
     String(String),
+    Boolean(bool),
 }
 
 impl Display for Value {
@@ -13,6 +16,7 @@ impl Display for Value {
         match self {
             Self::Number(x) => write!(f, "{}", x),
             Self::String(x) => write!(f, "{}", x),
+            Self::Boolean(x) => write!(f, "{}", x),
         }
     }
 }
@@ -21,6 +25,26 @@ impl Display for Value {
 pub enum Op {
     Plus,
     Minus,
+    Greater,
+    GreaterEqual,
+    Less,
+    LessEqual,
+    EqualTo,
+}
+
+impl From<TokenKind> for Op {
+    fn from(kind: TokenKind) -> Self {
+        match kind {
+            TokenKind::Symbol(lexer::SymbolKind::Plus) => Op::Plus,
+            TokenKind::Symbol(lexer::SymbolKind::Minus) => Op::Minus,
+            TokenKind::Symbol(lexer::SymbolKind::Greater) => Op::Greater,
+            TokenKind::Symbol(lexer::SymbolKind::GreaterEquals) => Op::GreaterEqual,
+            TokenKind::Symbol(lexer::SymbolKind::Less) => Op::Less,
+            TokenKind::Symbol(lexer::SymbolKind::LessEquals) => Op::LessEqual,
+            TokenKind::Symbol(lexer::SymbolKind::DoubleEquals) => Op::EqualTo,
+            _ => panic!("Cannot create Operator from Token: {:?}", kind),
+        }
+    }
 }
 
 #[derive(Clone, Copy, Debug, PartialEq)]

@@ -1,12 +1,15 @@
-<block>     ::= (<assign>)* (<func_call>)*
+<block>         ::= (<assign>)* (<func_call>)*
 
-<assign>    ::= <ident> "=" <expr>
-<expr>      ::= <term> "+" <expr> | <term> "-" <expr> | <term>
-<term>      ::= <factor> "*" <term> | <factor> "/" <term> | <factor>
-<factor>    ::= NUMBER | <ident> | "(" <expr> ")" | <func_call>
+<assign>        ::= <ident> "=" <root_expr>
+<root_expr>     ::= <expr> | <conditional>
+<expr>          ::= <term> "+" <expr> | <term> "-" <expr> | <term>
+<conditional>   ::= <expr> <condition> <expr>
+<condition>     ::= ">" | ">=" | "<" | "<="
+<term>          ::= <factor> "*" <term> | <factor> "/" <term> | <factor>
+<factor>        ::= NUMBER | <ident> | "(" <expr> ")" | <func_call>
 
-<func_call> ::= <ident> "(" <arg> ("," <arg>)* ")"
-<arg>       ::= <expr> | <string>
+<func_call>     ::= <ident> "(" <arg> ("," <arg>)* ")"
+<arg>           ::= <root_expr> | <string>
 
-<string>    ::= " STRING "
-<ident>     ::= STRING
+<string>        ::= " STRING "
+<ident>         ::= STRING

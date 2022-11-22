@@ -1,3 +1,5 @@
+use log::info;
+
 use crate::{
     ast::Node,
     error::ParserError,
@@ -19,10 +21,14 @@ impl Parser {
     }
 
     pub fn parse(&mut self) -> Result<Node, ParserError> {
+        info!("Begin parse");
+
         self.parse_block()
     }
 
     fn parse_block(&mut self) -> Result<Node, ParserError> {
+        info!("Parsing block");
+
         let mut nodes = Vec::new();
         while !self.tokens.is_empty() {
             let mut token_clone = self.tokens.clone();
@@ -50,6 +56,8 @@ impl Parser {
     }
 
     fn parse_func_call(&mut self) -> Node {
+        info!("Parsing func call");
+
         let token = self.get_token();
         let ident = match token.kind {
             TokenKind::Ident(x) => x,
@@ -71,16 +79,20 @@ impl Parser {
     }
 
     fn parse_arg(&mut self) -> Node {
+        info!("Parsing an argument");
+
         match self.peek_token().unwrap().kind {
             TokenKind::String(x) => {
                 self.get_token(); // consume token
                 Node::Primary(Value::String(x))
             }
-            _ => self.parse_expr(),
+            _ => self.parse_root_expr(),
         }
     }
 
     fn parse_assign(&mut self) -> Node {
+        info!("Parsing assign");
+
         let token = self.get_token();
         let ident = match token.kind {
             TokenKind::Ident(x) => x,
@@ -93,7 +105,7 @@ impl Parser {
                 self.get_token(); // consume string
                 Node::Primary(Value::String(x))
             }
-            _ => self.parse_expr(),
+            _ => self.parse_root_expr(),
         };
         Node::Assign {
             ident,
@@ -101,7 +113,39 @@ impl Parser {
         }
     }
 
+    fn parse_root_expr(&mut self) -> Node {
+        info!("Parsing root expression");
+
+        let left = self.parse_expr();
+        if let Some(x) = self.peek_token() {
+            match x.kind {
+                TokenKind::Symbol(SymbolKind::Greater)
+                | TokenKind::Symbol(SymbolKind::GreaterEquals)
+                | TokenKind::Symbol(SymbolKind::Less)
+                | TokenKind::Symbol(SymbolKind::LessEquals)
+                | TokenKind::Symbol(SymbolKind::DoubleEquals) => {
+                    let operator = self.get_token();
+                    let right = self.parse_expr();
+
+                    return Node::BinaryExpr {
+                        left: Box::new(left),
+                        operator: operator.kind.into(),
+                        right: Box::new(right),
+                    };
+                }
+                TokenKind::Symbol(SymbolKind::Plus) | TokenKind::Symbol(SymbolKind::Minus) => {
+                    self.parse_expr()
+                }
+                _ => return left,
+            }
+        } else {
+            panic!()
+        }
+    }
+
     fn parse_expr(&mut self) -> Node {
+        info!("Parsing expresion");
+
         let left = self.parse_term();
         let optok = self.peek_token();
         if let Some(x) = optok {
@@ -123,11 +167,13 @@ impl Parser {
     }
 
     fn parse_term(&mut self) -> Node {
+        info!("Parsing term");
         // for now, we will skip this
         self.parse_factor()
     }
 
     fn parse_factor(&mut self) -> Node {
+        info!("Parsing factor");
         let token = self.peek_token().unwrap();
         match token.kind {
             TokenKind::Number(x) => {
@@ -158,10 +204,14 @@ impl Parser {
 
     // TODO: MUST DO ERROR HANDLING - PANICING IS NOT ACCEPTABLE
     fn get_token(&mut self) -> Token {
-        self.tokens.pop().unwrap()
+        let tok = self.tokens.pop().unwrap();
+        info!("Get token: {:?}", tok);
+        tok
     }
 
     fn peek_token(&mut self) -> Option<Token> {
-        self.tokens.clone().pop()
+        let tok = self.tokens.clone().pop();
+        info!("Peek token: {:?}", tok);
+        tok
     }
 }
