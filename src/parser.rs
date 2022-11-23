@@ -30,6 +30,7 @@ impl Parser {
         info!("Parsing block");
 
         let mut nodes = Vec::new();
+        // loop through every token from our lexer
         while !self.tokens.is_empty() {
             let mut token_clone = self.tokens.clone();
             let token = token_clone.pop().unwrap();
@@ -86,7 +87,7 @@ impl Parser {
                 self.get_token(); // consume token
                 Node::Primary(Value::String(x))
             }
-            _ => self.parse_root_expr(),
+            _ => self.parse_expr(),
         }
     }
 
@@ -105,41 +106,11 @@ impl Parser {
                 self.get_token(); // consume string
                 Node::Primary(Value::String(x))
             }
-            _ => self.parse_root_expr(),
+            _ => self.parse_expr(),
         };
         Node::Assign {
             ident,
             value: Box::new(expr),
-        }
-    }
-
-    fn parse_root_expr(&mut self) -> Node {
-        info!("Parsing root expression");
-
-        let left = self.parse_expr();
-        if let Some(x) = self.peek_token() {
-            match x.kind {
-                TokenKind::Symbol(SymbolKind::Greater)
-                | TokenKind::Symbol(SymbolKind::GreaterEquals)
-                | TokenKind::Symbol(SymbolKind::Less)
-                | TokenKind::Symbol(SymbolKind::LessEquals)
-                | TokenKind::Symbol(SymbolKind::DoubleEquals) => {
-                    let operator = self.get_token();
-                    let right = self.parse_expr();
-
-                    return Node::BinaryExpr {
-                        left: Box::new(left),
-                        operator: operator.kind.into(),
-                        right: Box::new(right),
-                    };
-                }
-                TokenKind::Symbol(SymbolKind::Plus) | TokenKind::Symbol(SymbolKind::Minus) => {
-                    self.parse_expr()
-                }
-                _ => return left,
-            }
-        } else {
-            panic!()
         }
     }
 
@@ -152,6 +123,11 @@ impl Parser {
             let operator = match x.kind {
                 TokenKind::Symbol(SymbolKind::Plus) => Op::Plus,
                 TokenKind::Symbol(SymbolKind::Minus) => Op::Minus,
+                TokenKind::Symbol(SymbolKind::Greater) => Op::Greater,
+                TokenKind::Symbol(SymbolKind::GreaterEquals) => Op::GreaterEqual,
+                TokenKind::Symbol(SymbolKind::Less) => Op::Less,
+                TokenKind::Symbol(SymbolKind::LessEquals) => Op::LessEqual,
+                TokenKind::Symbol(SymbolKind::DoubleEquals) => Op::EqualTo,
                 _ => return left,
             };
             self.get_token(); // consume token

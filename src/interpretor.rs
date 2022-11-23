@@ -60,11 +60,8 @@ impl Interpretor {
         };
         // get value to put in symbol table
         match *rexpr.clone() {
-            Node::BinaryExpr { operator, .. } => {
-                let rvalue = match operator {
-                    Op::Plus | Op::Minus => self.run_arithmetic_expr(*rexpr),
-                    _ => self.run_comparison_expr(*rexpr),
-                };
+            Node::BinaryExpr { .. } => {
+                let rvalue = self.run_expr(*rexpr);
                 self.symbol_table.assign_variable(ident, rvalue);
             }
             Node::FuncCall { .. } => {
@@ -76,26 +73,7 @@ impl Interpretor {
         }
     }
 
-    fn run_arithmetic_expr(&mut self, node: Node) -> Value {
-        let (left, op, right) = match node {
-            Node::BinaryExpr {
-                left,
-                operator,
-                right,
-            } => (left, operator, right),
-            _ => panic!("Not an expression"),
-        };
-
-        let left_val = self.get_expr_val(*left);
-        let right_val = self.get_expr_val(*right);
-        match op {
-            Op::Plus => Value::Number(left_val + right_val),
-            Op::Minus => Value::Number(left_val - right_val),
-            _ => panic!("Invalid arithmetic expression"),
-        }
-    }
-
-    fn run_comparison_expr(&mut self, node: Node) -> Value {
+    fn run_expr(&mut self, node: Node) -> Value {
         let (left, op, right) = match node {
             Node::BinaryExpr {
                 left,
@@ -107,19 +85,21 @@ impl Interpretor {
 
         let lvalue = self.get_expr_val(*left);
         let rvalue = self.get_expr_val(*right);
-        Value::Boolean(match op {
-            Op::EqualTo => lvalue == rvalue,
-            Op::Less => lvalue < rvalue,
-            Op::LessEqual => lvalue <= rvalue,
-            Op::Greater => lvalue > rvalue,
-            Op::GreaterEqual => lvalue >= rvalue,
-            _ => panic!("Invalid operator for comparison"),
-        })
+        match op {
+            Op::Plus => Value::Number(lvalue + rvalue),
+            Op::Minus => Value::Number(lvalue - rvalue),
+            Op::EqualTo => Value::Boolean(lvalue == rvalue),
+            Op::Less => Value::Boolean(lvalue < rvalue),
+            Op::LessEqual => Value::Boolean(lvalue <= rvalue),
+            Op::Greater => Value::Boolean(lvalue > rvalue),
+            Op::GreaterEqual => Value::Boolean(lvalue >= rvalue),
+            _ => panic!("Invalid arithmetic expression"),
+        }
     }
 
     fn get_expr_val(&mut self, node: Node) -> Num {
         match node {
-            Node::BinaryExpr { .. } => match self.run_arithmetic_expr(node) {
+            Node::BinaryExpr { .. } => match self.run_expr(node) {
                 Value::Number(x) => x,
                 _ => panic!("Expression only supports numbers"),
             },
@@ -149,7 +129,7 @@ impl Interpretor {
                 println!("{}", x);
             }
             Node::BinaryExpr { .. } => {
-                let expr = self.run_arithmetic_expr(args[0].clone());
+                let expr = self.run_expr(args[0].clone());
                 println!("{}", expr);
             }
             Node::VariableRef(x) => {
@@ -172,7 +152,7 @@ impl Interpretor {
                     print!("{}", x);
                 }
                 Node::BinaryExpr { .. } => {
-                    let expr = self.run_arithmetic_expr(args[0].clone());
+                    let expr = self.run_expr(args[0].clone());
                     print!("{}", expr);
                 }
                 Node::VariableRef(x) => {
