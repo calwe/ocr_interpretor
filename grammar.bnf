@@ -1,7 +1,8 @@
 <block>         ::= (<assign> | <func_call> | <keyword>)*
 
-<keyword>       ::= <if_statement>
+<keyword>       ::= <if_statement> | <while_stmt>
 <if_statement>  ::= if <conditional> then <block> (else <block>)? endif
+<while_stmt>    ::= while <confitional> <block> endwhile
 <assign>        ::= <ident> "=" <root_expr>
 <root_expr>     ::= <expr> | <conditional>
 <expr>          ::= <term> "+" <expr> | <term> "-" <expr> | <term>

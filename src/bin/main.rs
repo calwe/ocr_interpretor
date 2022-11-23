@@ -5,12 +5,20 @@ pub fn main() {
 
     // TODO: Parse function with return value
     let input = r#"
-num1 = input("Enter a number: ")
-if int(num1) >= 10 then
-    print("Number is larger than, or equal to, 10")
-else
-    print("Number is less than 10")
-endif"#;
+n = int(input("How many fibonacci numbers: "))
+a = 0
+b = 1
+count = 2
+print(a)
+print(b)
+while count < n
+    next = a + b
+    print(next)
+    a = b
+    b = next
+    count = count + 1
+endwhile
+"#;
     println!("Input program:");
     println!("{}", input);
 

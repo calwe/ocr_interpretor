@@ -38,6 +38,7 @@ impl Interpretor {
             }
             Node::Assign { .. } => self.run_assign(node),
             Node::IfExpr { .. } => self.run_if(node),
+            Node::WhileStmt { .. } => self.run_while(node),
             Node::Block(nodes) => self.run_block(nodes),
             _ => todo!("more node types"),
         }
@@ -71,6 +72,18 @@ impl Interpretor {
         }
     }
 
+    fn run_while(&mut self, node: Node) {
+        info!("Running while");
+        let (expr, body) = match node {
+            Node::WhileStmt { expr, body } => (expr, body),
+            _ => panic!("Not a while statement"),
+        };
+
+        while self.evaluate_condition(*expr.clone()) {
+            self.run_node(*body.clone());
+        }
+    }
+
     fn run_func(&mut self, node: Node) -> Option<Value> {
         info!("Running function");
         let (ident, args) = match node {
@@ -101,12 +114,17 @@ impl Interpretor {
                 let rvalue = self.run_expr(*rexpr);
                 self.symbol_table.assign_variable(ident, rvalue);
             }
+            Node::VariableRef(_) => {
+                let rvalue = self.get_expr_val(*rexpr.clone());
+                self.symbol_table
+                    .assign_variable(ident, Value::Number(rvalue));
+            }
             Node::FuncCall { .. } => {
                 let rvalue = self.run_func(*rexpr).expect("function has no return value");
                 self.symbol_table.assign_variable(ident, rvalue);
             }
             Node::Primary(x) => self.symbol_table.assign_variable(ident, x),
-            _ => panic!("unsupported rvalue for assign"),
+            _ => panic!("unsupported rvalue for assign: {:?}", *rexpr.clone()),
         }
     }
 
@@ -155,6 +173,13 @@ impl Interpretor {
             },
             Node::Primary(Value::Number(x)) => x,
             _ => unimplemented!("Unsupported value for expression side"),
+        }
+    }
+
+    fn evaluate_condition(&mut self, expr: Node) -> bool {
+        match self.run_expr(expr) {
+            Value::Boolean(x) => x,
+            _ => panic!("Invalid expression for while loop condition"),
         }
     }
 
@@ -231,6 +256,15 @@ impl Interpretor {
                 let var = self.symbol_table.get_variable(x.to_string());
                 info!("Casting variable ({} = {}) to int", x, var);
                 match var {
+                    Value::String(x) => Value::Number(x.parse().unwrap()),
+                    _ => panic!("Invalid variable type for cast"),
+                }
+            }
+            Node::FuncCall { .. } => {
+                info!("Casting result from func call to int");
+                let ret = self.run_func(args[0].clone()).unwrap();
+                info!("Got {ret} from func");
+                match ret {
                     Value::String(x) => Value::Number(x.parse().unwrap()),
                     _ => panic!("Invalid variable type for cast"),
                 }

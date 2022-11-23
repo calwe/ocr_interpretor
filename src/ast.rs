@@ -12,6 +12,10 @@ pub enum Node {
         then: Box<Node>,
         els: Box<Node>,
     },
+    WhileStmt {
+        expr: Box<Node>,
+        body: Box<Node>,
+    },
     FuncCall {
         ident: String,
         args: Vec<Node>,

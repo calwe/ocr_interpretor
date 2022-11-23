@@ -53,7 +53,12 @@ impl Parser {
                 TokenKind::Keyword(KeywordKind::If) => {
                     nodes.push(self.parse_if());
                 }
-                TokenKind::Keyword(KeywordKind::EndIf) | TokenKind::Keyword(KeywordKind::Else) => {
+                TokenKind::Keyword(KeywordKind::While) => {
+                    nodes.push(self.parse_while());
+                }
+                TokenKind::Keyword(KeywordKind::EndIf)
+                | TokenKind::Keyword(KeywordKind::Else)
+                | TokenKind::Keyword(KeywordKind::EndWhile) => {
                     return Ok(Node::Block(nodes));
                 }
                 _ => return Err(ParserError::InvalidTokenInBlock(token, self.input.clone())),
@@ -78,6 +83,19 @@ impl Parser {
             expr: Box::new(expr),
             then: Box::new(then),
             els: Box::new(els),
+        }
+    }
+
+    fn parse_while(&mut self) -> Node {
+        info!("Parsing while statement");
+
+        self.get_token(); // consume "while"
+        let expr = self.parse_expr();
+        let body = self.parse_block().unwrap();
+
+        Node::WhileStmt {
+            expr: Box::new(expr),
+            body: Box::new(body),
         }
     }
 
