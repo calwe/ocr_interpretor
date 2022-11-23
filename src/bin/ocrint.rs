@@ -19,7 +19,7 @@ struct Cli {
 
 pub fn main() {
     env_logger::init();
-    let cli = Cli::parse();
+    let cli = Cli::parse()
 
     let input = fs::read_to_string(cli.program).unwrap();
 
