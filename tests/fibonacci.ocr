@@ -1,0 +1,13 @@
+n = int(input("How many fibonacci numbers: "))
+a = 0
+b = 1
+count = 2
+print(a)
+print(b)
+while count < n
+    next = a + b
+    print(next)
+    a = b
+    b = next
+    count = count + 1
+endwhile
