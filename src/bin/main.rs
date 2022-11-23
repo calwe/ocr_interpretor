@@ -4,8 +4,13 @@ pub fn main() {
     env_logger::init();
 
     // TODO: Parse function with return value
-    let input = r#"boolean = 5 < 6
-print(boolean)"#;
+    let input = r#"
+num1 = input("Enter a number: ")
+if int(num1) >= 10 then
+    print("Number is larger than, or equal to, 10")
+else
+    print("Number is less than 10")
+endif"#;
     println!("Input program:");
     println!("{}", input);
 

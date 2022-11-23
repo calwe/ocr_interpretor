@@ -3,7 +3,7 @@ use log::info;
 use crate::{
     ast::Node,
     error::ParserError,
-    lexer::{SymbolKind, Token, TokenKind},
+    lexer::{KeywordKind, SymbolKind, Token, TokenKind},
     Op, Value,
 };
 
@@ -50,10 +50,35 @@ impl Parser {
                         _ => unimplemented!("unimplemented ident"),
                     }
                 }
+                TokenKind::Keyword(KeywordKind::If) => {
+                    nodes.push(self.parse_if());
+                }
+                TokenKind::Keyword(KeywordKind::EndIf) | TokenKind::Keyword(KeywordKind::Else) => {
+                    return Ok(Node::Block(nodes));
+                }
                 _ => return Err(ParserError::InvalidTokenInBlock(token, self.input.clone())),
             }
         }
         Ok(Node::Block(nodes))
+    }
+
+    fn parse_if(&mut self) -> Node {
+        info!("Parsing if statement");
+
+        self.get_token(); // consume "if"
+        let expr = self.parse_expr();
+        self.get_token(); // consume "then"
+        let then = self.parse_block().unwrap();
+        let els = match self.get_token().kind {
+            TokenKind::Keyword(KeywordKind::Else) => self.parse_block().unwrap(),
+            _ => Node::Block(Vec::new()),
+        };
+
+        Node::IfExpr {
+            expr: Box::new(expr),
+            then: Box::new(then),
+            els: Box::new(els),
+        }
     }
 
     fn parse_func_call(&mut self) -> Node {

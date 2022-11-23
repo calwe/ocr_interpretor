@@ -1,5 +1,7 @@
-<block>         ::= (<assign>)* (<func_call>)*
+<block>         ::= (<assign> | <func_call> | <keyword>)*
 
+<keyword>       ::= <if_statement>
+<if_statement>  ::= if <conditional> then <block> (else <block>)? endif
 <assign>        ::= <ident> "=" <root_expr>
 <root_expr>     ::= <expr> | <conditional>
 <expr>          ::= <term> "+" <expr> | <term> "-" <expr> | <term>
