@@ -116,8 +116,7 @@ impl Interpretor {
             }
             Node::VariableRef(_) => {
                 let rvalue = self.get_expr_val(*rexpr.clone());
-                self.symbol_table
-                    .assign_variable(ident, Value::Number(rvalue));
+                self.symbol_table.assign_variable(ident, rvalue);
             }
             Node::FuncCall { .. } => {
                 let rvalue = self.run_func(*rexpr).expect("function has no return value");
@@ -141,41 +140,42 @@ impl Interpretor {
 
         let lvalue = self.get_expr_val(*left);
         let rvalue = self.get_expr_val(*right);
-        match op {
-            Op::Plus => Value::Number(lvalue + rvalue),
-            Op::Minus => Value::Number(lvalue - rvalue),
-            Op::Multiply => Value::Number(lvalue * rvalue),
-            Op::Divide => Value::Number(lvalue / rvalue),
-            Op::EqualTo => Value::Boolean(lvalue == rvalue),
-            Op::Less => Value::Boolean(lvalue < rvalue),
-            Op::LessEqual => Value::Boolean(lvalue <= rvalue),
-            Op::Greater => Value::Boolean(lvalue > rvalue),
-            Op::GreaterEqual => Value::Boolean(lvalue >= rvalue),
-            _ => panic!("Invalid arithmetic expression"),
+
+        match lvalue {
+            Value::Number(x) => match rvalue {
+                Value::Number(y) => match op {
+                    Op::Plus => Value::Number(x + y),
+                    Op::Minus => Value::Number(x - y),
+                    Op::Multiply => Value::Number(x * y),
+                    Op::Divide => Value::Number(x / y),
+                    Op::EqualTo => Value::Boolean(x == y),
+                    Op::Less => Value::Boolean(x < y),
+                    Op::LessEqual => Value::Boolean(x <= y),
+                    Op::Greater => Value::Boolean(x > y),
+                    Op::GreaterEqual => Value::Boolean(x >= y),
+                    _ => panic!("Invalid arithmetic expression"),
+                },
+                Value::String(_) => self.concat(lvalue, rvalue),
+                _ => panic!(),
+            },
+            Value::String(_) => self.concat(lvalue, rvalue),
+            _ => panic!(),
         }
     }
 
-    fn get_expr_val(&mut self, node: Node) -> Num {
+    fn get_expr_val(&mut self, node: Node) -> Value {
         info!("Getting numeric value from expression");
         match node {
-            Node::BinaryExpr { .. } => match self.run_expr(node) {
-                Value::Number(x) => x,
-                _ => panic!("Expression only supports numbers"),
-            },
-            Node::VariableRef(x) => {
-                let var = self.symbol_table.get_variable(x);
-                match var {
-                    Value::Number(x) => x,
-                    _ => panic!("Expression only supports numbers"),
-                }
-            }
-            Node::FuncCall { .. } => match self.run_func(node) {
-                Some(Value::Number(x)) => x,
-                _ => panic!("Expression only supports numbers"),
-            },
-            Node::Primary(Value::Number(x)) => x,
+            Node::BinaryExpr { .. } => self.run_expr(node),
+            Node::VariableRef(x) => self.symbol_table.get_variable(x),
+            Node::FuncCall { .. } => self.run_func(node).unwrap(),
+            Node::Primary(x) => x,
             _ => unimplemented!("Unsupported value for expression side"),
         }
+    }
+
+    fn concat(&mut self, lvalue: Value, rvalue: Value) -> Value {
+        Value::String(format!("{}{}", lvalue, rvalue))
     }
 
     fn evaluate_condition(&mut self, expr: Node) -> bool {

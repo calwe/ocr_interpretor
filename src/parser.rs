@@ -126,10 +126,6 @@ impl Parser {
         info!("Parsing an argument");
 
         match self.peek_token().unwrap().kind {
-            TokenKind::String(x) => {
-                self.get_token(); // consume token
-                Node::Primary(Value::String(x))
-            }
             _ => self.parse_expr(),
         }
     }
@@ -145,10 +141,6 @@ impl Parser {
         // TODO: Verify equals
         self.get_token(); // consume '='
         let expr = match self.peek_token().unwrap().kind {
-            TokenKind::String(x) => {
-                self.get_token(); // consume string
-                Node::Primary(Value::String(x))
-            }
             _ => self.parse_expr(),
         };
         Node::Assign {
@@ -215,6 +207,10 @@ impl Parser {
             TokenKind::Number(x) => {
                 self.get_token();
                 Node::Primary(Value::Number(x))
+            }
+            TokenKind::String(x) => {
+                self.get_token();
+                Node::Primary(Value::String(x))
             }
             TokenKind::Ident(x) => {
                 let mut peekpeek = self.tokens.clone();

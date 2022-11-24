@@ -1,0 +1,2 @@
+age = input("What is your age? ")
+print("you are " + age + " years old")
