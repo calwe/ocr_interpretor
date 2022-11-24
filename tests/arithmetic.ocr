@@ -1,0 +1,8 @@
+op = int(input("1 for multiply, 2 for divide: "))
+num1 = int(input("First num: "))
+num2 = int(input("Second num: "))
+if op == 1 then
+    print(num1 * num2)
+else
+    print(num1 / num2)
+endif

@@ -29,6 +29,8 @@ pub enum SymbolKind {
     PlusEqual,
     Minus,
     MinusEqual,
+    Multiply,
+    Divide,
     // comparison
     DoubleEquals,
     Greater,
@@ -83,7 +85,7 @@ impl Lexer {
                     self.position.line += 1;
                 }
                 '\0' | ' ' => continue,
-                '=' | '<' | '>' | '+' | '-' => {
+                '=' | '<' | '>' | '+' | '-' | '*' | '/' => {
                     let peek = self.peek_char();
                     match peek {
                         '=' => {
@@ -126,6 +128,8 @@ impl Lexer {
             "+=" => self.push_symbol(SymbolKind::PlusEqual, start_pos, 2),
             "- " => self.push_symbol(SymbolKind::Minus, start_pos, 1),
             "-=" => self.push_symbol(SymbolKind::MinusEqual, start_pos, 2),
+            "* " => self.push_symbol(SymbolKind::Multiply, start_pos, 1),
+            "/ " => self.push_symbol(SymbolKind::Divide, start_pos, 1),
             _ => {
                 panic!("Invalid Dual Character: This is a compiler bug, please report on github")
             }

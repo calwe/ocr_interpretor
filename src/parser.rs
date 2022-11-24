@@ -188,7 +188,24 @@ impl Parser {
     fn parse_term(&mut self) -> Node {
         info!("Parsing term");
         // for now, we will skip this
-        self.parse_factor()
+        let left = self.parse_factor();
+        let optok = self.peek_token();
+        if let Some(x) = optok {
+            let operator = match x.kind {
+                TokenKind::Symbol(SymbolKind::Multiply) => Op::Multiply,
+                TokenKind::Symbol(SymbolKind::Divide) => Op::Divide,
+                _ => return left,
+            };
+            self.get_token(); // consume token
+            let right = self.parse_expr();
+            Node::BinaryExpr {
+                left: Box::new(left),
+                operator,
+                right: Box::new(right),
+            }
+        } else {
+            left
+        }
     }
 
     fn parse_factor(&mut self) -> Node {

@@ -25,6 +25,8 @@ impl Display for Value {
 pub enum Op {
     Plus,
     Minus,
+    Multiply,
+    Divide,
     Greater,
     GreaterEqual,
     Less,

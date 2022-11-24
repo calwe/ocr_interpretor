@@ -144,6 +144,8 @@ impl Interpretor {
         match op {
             Op::Plus => Value::Number(lvalue + rvalue),
             Op::Minus => Value::Number(lvalue - rvalue),
+            Op::Multiply => Value::Number(lvalue * rvalue),
+            Op::Divide => Value::Number(lvalue / rvalue),
             Op::EqualTo => Value::Boolean(lvalue == rvalue),
             Op::Less => Value::Boolean(lvalue < rvalue),
             Op::LessEqual => Value::Boolean(lvalue <= rvalue),
