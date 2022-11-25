@@ -19,6 +19,7 @@ pub enum KeywordKind {
     Else,
     EndIf,
     Break,
+    Array,
 }
 
 #[derive(Clone, Debug, PartialEq)]
@@ -40,6 +41,8 @@ pub enum SymbolKind {
     // other
     LeftBracket,
     RightBracket,
+    LeftSqBracket,
+    RightSqBracket,
     Quote,
 }
 
@@ -97,6 +100,8 @@ impl Lexer {
                 }
                 '(' => self.push_symbol(SymbolKind::LeftBracket, self.position, 1),
                 ')' => self.push_symbol(SymbolKind::RightBracket, self.position, 1),
+                '[' => self.push_symbol(SymbolKind::LeftSqBracket, self.position, 1),
+                ']' => self.push_symbol(SymbolKind::RightSqBracket, self.position, 1),
                 '"' => self.string(),
                 '0'..='9' => self.numeric(c),
                 'a'..='z' | 'A'..='Z' | '_' => self.ident_or_keyword(c),
@@ -181,6 +186,7 @@ impl Lexer {
             "else" => self.push_keyword(KeywordKind::Else, start_pos, 4),
             "endif" => self.push_keyword(KeywordKind::EndIf, start_pos, 5),
             "break" => self.push_keyword(KeywordKind::Break, start_pos, 5),
+            "array" => self.push_keyword(KeywordKind::Array, start_pos, 5),
             _ => self.push_ident(ident, start_pos),
         }
     }

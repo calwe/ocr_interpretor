@@ -9,6 +9,7 @@ pub enum Value {
     Number(Num),
     String(String),
     Boolean(bool),
+    Array(Vec<Value>),
 }
 
 impl Display for Value {
@@ -17,6 +18,7 @@ impl Display for Value {
             Self::Number(x) => write!(f, "{}", x),
             Self::String(x) => write!(f, "{}", x),
             Self::Boolean(x) => write!(f, "{}", x),
+            Self::Array(x) => write!(f, "{:?}", x),
         }
     }
 }

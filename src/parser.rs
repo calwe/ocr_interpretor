@@ -47,8 +47,14 @@ impl Parser {
                         TokenKind::Symbol(SymbolKind::LeftBracket) => {
                             nodes.push(self.parse_func_call());
                         }
+                        TokenKind::Symbol(SymbolKind::LeftSqBracket) => {
+                            nodes.push(self.parse_array_assign_ind());
+                        }
                         _ => unimplemented!("unimplemented ident"),
                     }
+                }
+                TokenKind::Keyword(KeywordKind::Array) => {
+                    nodes.push(self.parse_array());
                 }
                 TokenKind::Keyword(KeywordKind::If) => {
                     nodes.push(self.parse_if());
@@ -149,6 +155,55 @@ impl Parser {
         }
     }
 
+    fn parse_array_assign_ind(&mut self) -> Node {
+        info!("Parsing assign to array index");
+
+        let token = self.get_token();
+        let ident = match token.kind {
+            TokenKind::Ident(x) => x,
+            _ => panic!("array assign must have ident"),
+        };
+
+        let index = match self.get_token().kind {
+            TokenKind::Symbol(SymbolKind::LeftSqBracket) => self.parse_expr(),
+            _ => panic!("array must be indexed with ["),
+        };
+
+        self.get_token(); // consume '['
+        let value = match self.get_token().kind {
+            TokenKind::Symbol(SymbolKind::Equals) => self.parse_expr(),
+            _ => panic!("Must assign array with ="),
+        };
+
+        Node::ArrayAssingIndex {
+            ident,
+            index: Box::new(index),
+            value: Box::new(value),
+        }
+    }
+
+    fn parse_array(&mut self) -> Node {
+        info!("Parsing array");
+
+        self.get_token(); // consume 'array'
+        let ident = match self.get_token().kind {
+            TokenKind::Ident(x) => x,
+            _ => panic!("array must have ident"),
+        };
+
+        let size = match self.get_token().kind {
+            TokenKind::Symbol(SymbolKind::LeftSqBracket) => self.parse_expr(),
+            _ => panic!("array must have ["),
+        };
+
+        self.get_token(); // consume final '['
+
+        Node::ArrayAssign {
+            ident,
+            size: Box::new(size),
+        }
+    }
+
     fn parse_expr(&mut self) -> Node {
         info!("Parsing expresion");
 
@@ -218,6 +273,9 @@ impl Parser {
                 if let Some(x) = peekpeek.pop() {
                     if x.kind == TokenKind::Symbol(SymbolKind::LeftBracket) {
                         return self.parse_func_call();
+                    } else if x.kind == TokenKind::Symbol(SymbolKind::LeftSqBracket) {
+                        info!("Array ref as factor");
+                        return self.parse_array_ref();
                     }
                 }
                 self.get_token();
@@ -231,6 +289,25 @@ impl Parser {
                 expr
             }
             _ => unimplemented!("Unimplemented factor: {:?}", token.kind),
+        }
+    }
+
+    fn parse_array_ref(&mut self) -> Node {
+        let ident = match self.get_token().kind {
+            TokenKind::Ident(x) => x,
+            _ => panic!("array ref must have ident"),
+        };
+
+        let index = match self.get_token().kind {
+            TokenKind::Symbol(SymbolKind::LeftSqBracket) => self.parse_expr(),
+            _ => panic!("array index must be specified with square brackets"),
+        };
+
+        self.get_token(); // consume final ']'
+
+        Node::ArrayRef {
+            ident,
+            index: Box::new(index),
         }
     }
 

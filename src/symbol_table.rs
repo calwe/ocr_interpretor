@@ -2,6 +2,7 @@ use std::collections::HashMap;
 
 use crate::Value;
 
+#[derive(Debug)]
 pub struct SymbolTable {
     symbols: HashMap<String, Value>,
 }

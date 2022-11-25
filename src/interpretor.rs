@@ -37,6 +37,8 @@ impl Interpretor {
                 self.run_func(node);
             }
             Node::Assign { .. } => self.run_assign(node),
+            Node::ArrayAssign { .. } => self.run_array_assign(node),
+            Node::ArrayAssingIndex { .. } => self.run_array_assign_ind(node),
             Node::IfExpr { .. } => self.run_if(node),
             Node::WhileStmt { .. } => self.run_while(node),
             Node::Block(nodes) => self.run_block(nodes),
@@ -127,6 +129,55 @@ impl Interpretor {
         }
     }
 
+    fn run_array_assign(&mut self, node: Node) {
+        info!("Creating array");
+        let (ident, size) = match node {
+            Node::ArrayAssign { ident, size } => (ident, size),
+            _ => panic!("Not an assign"),
+        };
+
+        let numeric_size = match self.get_expr_val(*size) {
+            Value::Number(x) => x,
+            _ => panic!("Array size must be numeric"),
+        };
+
+        // create vector of size, with all parts initialised as 0
+        let array = std::iter::repeat(Value::Number(0))
+            .take(numeric_size as usize)
+            .collect::<Vec<_>>();
+
+        self.symbol_table
+            .assign_variable(ident, Value::Array(array));
+
+        info!("Symbol table: {:#?}", self.symbol_table);
+    }
+
+    fn run_array_assign_ind(&mut self, node: Node) {
+        info!("Assigning array index");
+        let (ident, index, value) = match node {
+            Node::ArrayAssingIndex {
+                ident,
+                index,
+                value,
+            } => (ident, index, value),
+            _ => panic!("Not an array index assign"),
+        };
+
+        let numeric_index = match self.get_expr_val(*index) {
+            Value::Number(x) => x,
+            _ => panic!("Index must be numeric"),
+        };
+
+        let value = self.get_expr_val(*value);
+
+        let mut vec = match self.symbol_table.get_variable(ident.clone()) {
+            Value::Array(x) => x,
+            _ => panic!("Cannot index into non array type"),
+        };
+        vec[numeric_index as usize] = value;
+        self.symbol_table.assign_variable(ident, Value::Array(vec));
+    }
+
     fn run_expr(&mut self, node: Node) -> Value {
         info!("Running expression");
         let (left, op, right) = match node {
@@ -168,10 +219,31 @@ impl Interpretor {
         match node {
             Node::BinaryExpr { .. } => self.run_expr(node),
             Node::VariableRef(x) => self.symbol_table.get_variable(x),
+            Node::ArrayRef { .. } => self.get_array_ref(node),
             Node::FuncCall { .. } => self.run_func(node).unwrap(),
             Node::Primary(x) => x,
             _ => unimplemented!("Unsupported value for expression side"),
         }
+    }
+
+    fn get_array_ref(&mut self, node: Node) -> Value {
+        info!("Getting array reference");
+        let (ident, index) = match node {
+            Node::ArrayRef { ident, index } => (ident, index),
+            _ => panic!("Not an array ref"),
+        };
+
+        let numeric_index = match self.get_expr_val(*index) {
+            Value::Number(x) => x,
+            _ => panic!("Index must be numeric"),
+        };
+
+        let symbol = self.symbol_table.get_variable(ident.to_string());
+        let vec = match symbol {
+            Value::Array(x) => x,
+            _ => panic!("Cannot index into {}", symbol),
+        };
+        vec[numeric_index as usize].clone()
     }
 
     fn concat(&mut self, lvalue: Value, rvalue: Value) -> Value {
@@ -195,20 +267,8 @@ impl Interpretor {
             panic!("print cannot accept more than 1 arg!");
         }
 
-        match &args[0] {
-            Node::Primary(x) => {
-                println!("{}", x);
-            }
-            Node::BinaryExpr { .. } => {
-                let expr = self.run_expr(args[0].clone());
-                println!("{}", expr);
-            }
-            Node::VariableRef(x) => {
-                let var = self.symbol_table.get_variable(x.to_string());
-                println!("{}", var);
-            }
-            _ => unimplemented!("cannot print {:?}", args[0]),
-        }
+        let to_print = self.get_expr_val(args[0].clone());
+        println!("{}", to_print);
     }
 
     fn builtin_input(&mut self, args: Vec<Node>) -> Value {
