@@ -1,0 +1,23 @@
+array list[10]
+count = 0
+while count < 10
+    list[count] = int(input("list[" + count + "]: "))
+    count = count + 1
+endwhile
+print("test")
+toFind = int(input("What item would you like to find? "))
+midpoint = 0
+start = 0
+end = list.length - 1
+while start <= end
+      mid = (start + end) / 2
+      if list[mid] == toFind then
+         print("Found at index " + mid)
+         start = end + 1
+      else if list[mid] > toFind then
+           end = mid - 1
+      else
+           start = mid + 1
+      endif
+      endif
+endwhile

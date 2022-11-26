@@ -1,4 +1,4 @@
-use log::info;
+use log::{info, warn};
 
 use crate::{
     ast::Node,
@@ -50,6 +50,9 @@ impl Parser {
                         TokenKind::Symbol(SymbolKind::LeftSqBracket) => {
                             nodes.push(self.parse_array_assign_ind());
                         }
+                        TokenKind::Symbol(SymbolKind::Dot) => {
+                            nodes.push(self.parse_dot_expr());
+                        }
                         _ => unimplemented!("unimplemented ident"),
                     }
                 }
@@ -63,8 +66,11 @@ impl Parser {
                     nodes.push(self.parse_while());
                 }
                 TokenKind::Keyword(KeywordKind::EndIf)
-                | TokenKind::Keyword(KeywordKind::Else)
                 | TokenKind::Keyword(KeywordKind::EndWhile) => {
+                    warn!("return from block");
+                    return Ok(Node::Block(nodes));
+                }
+                TokenKind::Keyword(KeywordKind::Else) => {
                     return Ok(Node::Block(nodes));
                 }
                 _ => return Err(ParserError::InvalidTokenInBlock(token, self.input.clone())),
@@ -98,6 +104,7 @@ impl Parser {
         self.get_token(); // consume "while"
         let expr = self.parse_expr();
         let body = self.parse_block().unwrap();
+        self.get_token(); // consume "endwhile"
 
         Node::WhileStmt {
             expr: Box::new(expr),
@@ -204,6 +211,23 @@ impl Parser {
         }
     }
 
+    fn parse_dot_expr(&mut self) -> Node {
+        info!("Parsing dot expr");
+
+        let left = match self.get_token().kind {
+            TokenKind::Ident(x) => x,
+            _ => panic!("Dot expressions only supports idents currently"),
+        };
+
+        self.get_token(); // consume '.'
+        let right = match self.get_token().kind {
+            TokenKind::Ident(x) => x,
+            _ => panic!("Dot expression rvalue must be ident"),
+        };
+
+        Node::DotExpr { left, right }
+    }
+
     fn parse_expr(&mut self) -> Node {
         info!("Parsing expresion");
 
@@ -276,6 +300,9 @@ impl Parser {
                     } else if x.kind == TokenKind::Symbol(SymbolKind::LeftSqBracket) {
                         info!("Array ref as factor");
                         return self.parse_array_ref();
+                    } else if x.kind == TokenKind::Symbol(SymbolKind::Dot) {
+                        info!("Dot as factor");
+                        return self.parse_dot_expr();
                     }
                 }
                 self.get_token();

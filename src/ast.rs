@@ -39,5 +39,9 @@ pub enum Node {
         operator: Op,
         right: Box<Node>,
     },
+    DotExpr {
+        left: String,
+        right: String,
+    },
     Primary(Value),
 }

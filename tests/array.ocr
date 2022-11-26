@@ -1,3 +1,4 @@
 array nums[5]
 nums[0] = 10
-print(nums[0])
+nums[5] = "test"
+print(nums)

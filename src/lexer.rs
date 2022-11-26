@@ -44,6 +44,7 @@ pub enum SymbolKind {
     LeftSqBracket,
     RightSqBracket,
     Quote,
+    Dot,
 }
 
 #[derive(Clone, Debug, PartialEq)]
@@ -102,6 +103,7 @@ impl Lexer {
                 ')' => self.push_symbol(SymbolKind::RightBracket, self.position, 1),
                 '[' => self.push_symbol(SymbolKind::LeftSqBracket, self.position, 1),
                 ']' => self.push_symbol(SymbolKind::RightSqBracket, self.position, 1),
+                '.' => self.push_symbol(SymbolKind::Dot, self.position, 1),
                 '"' => self.string(),
                 '0'..='9' => self.numeric(c),
                 'a'..='z' | 'A'..='Z' | '_' => self.ident_or_keyword(c),

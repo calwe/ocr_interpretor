@@ -70,7 +70,7 @@ impl Interpretor {
                 info!("If expression is false.");
                 self.run_node(*els);
             }
-            _ => panic!("Unsupported expression as condition"),
+            _ => panic!("Unsupported expression as condition: {}", condition),
         }
     }
 
@@ -118,6 +118,14 @@ impl Interpretor {
             }
             Node::VariableRef(_) => {
                 let rvalue = self.get_expr_val(*rexpr.clone());
+                self.symbol_table.assign_variable(ident, rvalue);
+            }
+            Node::ArrayRef { .. } => {
+                let rvalue = self.get_array_ref(*rexpr);
+                self.symbol_table.assign_variable(ident, rvalue);
+            }
+            Node::DotExpr { .. } => {
+                let rvalue = self.run_dot_expr(*rexpr);
                 self.symbol_table.assign_variable(ident, rvalue);
             }
             Node::FuncCall { .. } => {
@@ -179,7 +187,7 @@ impl Interpretor {
     }
 
     fn run_expr(&mut self, node: Node) -> Value {
-        info!("Running expression");
+        info!("Running expression: {:?}", node);
         let (left, op, right) = match node {
             Node::BinaryExpr {
                 left,
@@ -191,6 +199,8 @@ impl Interpretor {
 
         let lvalue = self.get_expr_val(*left);
         let rvalue = self.get_expr_val(*right);
+
+        info!("lv: {:?}, op: {:?}, rv: {:?}", lvalue, op, rvalue);
 
         match lvalue {
             Value::Number(x) => match rvalue {
@@ -215,19 +225,35 @@ impl Interpretor {
     }
 
     fn get_expr_val(&mut self, node: Node) -> Value {
-        info!("Getting numeric value from expression");
+        info!("Getting numeric value from expression: {:?}", node);
         match node {
             Node::BinaryExpr { .. } => self.run_expr(node),
             Node::VariableRef(x) => self.symbol_table.get_variable(x),
             Node::ArrayRef { .. } => self.get_array_ref(node),
             Node::FuncCall { .. } => self.run_func(node).unwrap(),
+            Node::DotExpr { .. } => self.run_dot_expr(node),
             Node::Primary(x) => x,
             _ => unimplemented!("Unsupported value for expression side"),
         }
     }
 
+    fn run_dot_expr(&mut self, node: Node) -> Value {
+        info!("Running dot expr");
+
+        let (lvalue, rvalue) = match node {
+            Node::DotExpr { left, right } => (left, right),
+            _ => panic!("Not a dot expr"),
+        };
+
+        // test for builtin
+        match rvalue.as_str() {
+            "length" => self.builtin_length(lvalue),
+            _ => panic!("Only builtin lvalues are suported"),
+        }
+    }
+
     fn get_array_ref(&mut self, node: Node) -> Value {
-        info!("Getting array reference");
+        info!("Getting array reference: {:?}", node);
         let (ident, index) = match node {
             Node::ArrayRef { ident, index } => (ident, index),
             _ => panic!("Not an array ref"),
@@ -237,6 +263,8 @@ impl Interpretor {
             Value::Number(x) => x,
             _ => panic!("Index must be numeric"),
         };
+
+        info!("Array Index: {}", numeric_index);
 
         let symbol = self.symbol_table.get_variable(ident.to_string());
         let vec = match symbol {
@@ -333,5 +361,16 @@ impl Interpretor {
             }
             _ => panic!("Invald cast"),
         }
+    }
+
+    fn builtin_length(&mut self, ident: String) -> Value {
+        info!("Built in property: length");
+
+        let vec = match self.symbol_table.get_variable(ident) {
+            Value::Array(x) => x,
+            _ => panic!("Only arrays have the builtin property: length"),
+        };
+
+        Value::Number(vec.len() as Num)
     }
 }

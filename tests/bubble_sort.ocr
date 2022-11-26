@@ -1,0 +1,22 @@
+array nums[10]
+count = 0
+while count < 10
+    nums[count] = int(input("nums[" + count + "]: "))
+    count = count + 1
+endwhile
+
+i = 0
+while i < (nums.length - 1)
+      j = 1
+      while j < (nums.length - i)
+            if nums[j - 1] > nums[j] then
+                tmp = nums[j - 1]
+                nums[j - 1] = nums[j]
+                nums[j] = tmp
+            endif
+            j = j + 1
+      endwhile
+      i = i + 1
+endwhile
+
+print(nums)
