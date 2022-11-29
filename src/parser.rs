@@ -265,6 +265,7 @@ impl Parser {
             let operator = match x.kind {
                 TokenKind::Symbol(SymbolKind::Multiply) => Op::Multiply,
                 TokenKind::Symbol(SymbolKind::Divide) => Op::Divide,
+                TokenKind::Symbol(SymbolKind::Mod) => Op::Mod,
                 _ => return left,
             };
             self.get_token(); // consume token

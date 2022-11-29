@@ -209,6 +209,7 @@ impl Interpretor {
                     Op::Minus => Value::Number(x - y),
                     Op::Multiply => Value::Number(x * y),
                     Op::Divide => Value::Number(x / y),
+                    Op::Mod => Value::Number(x % y),
                     Op::EqualTo => Value::Boolean(x == y),
                     Op::Less => Value::Boolean(x < y),
                     Op::LessEqual => Value::Boolean(x <= y),

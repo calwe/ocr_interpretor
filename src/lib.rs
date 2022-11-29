@@ -29,6 +29,7 @@ pub enum Op {
     Minus,
     Multiply,
     Divide,
+    Mod,
     Greater,
     GreaterEqual,
     Less,
