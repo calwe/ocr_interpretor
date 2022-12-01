@@ -83,7 +83,7 @@ impl Parser {
         info!("Parsing if statement");
 
         self.get_token(); // consume "if"
-        let expr = self.parse_expr();
+        let expr = self.parse_cond();
         self.get_token(); // consume "then"
         let then = self.parse_block().unwrap();
         let els = match self.get_token().kind {
@@ -102,7 +102,7 @@ impl Parser {
         info!("Parsing while statement");
 
         self.get_token(); // consume "while"
-        let expr = self.parse_expr();
+        let expr = self.parse_cond();
         let body = self.parse_block().unwrap();
         self.get_token(); // consume "endwhile"
 
@@ -139,7 +139,7 @@ impl Parser {
         info!("Parsing an argument");
 
         match self.peek_token().unwrap().kind {
-            _ => self.parse_expr(),
+            _ => self.parse_cond(),
         }
     }
 
@@ -154,7 +154,7 @@ impl Parser {
         // TODO: Verify equals
         self.get_token(); // consume '='
         let expr = match self.peek_token().unwrap().kind {
-            _ => self.parse_expr(),
+            _ => self.parse_cond(),
         };
         Node::Assign {
             ident,
@@ -172,13 +172,13 @@ impl Parser {
         };
 
         let index = match self.get_token().kind {
-            TokenKind::Symbol(SymbolKind::LeftSqBracket) => self.parse_expr(),
+            TokenKind::Symbol(SymbolKind::LeftSqBracket) => self.parse_cond(),
             _ => panic!("array must be indexed with ["),
         };
 
         self.get_token(); // consume '['
         let value = match self.get_token().kind {
-            TokenKind::Symbol(SymbolKind::Equals) => self.parse_expr(),
+            TokenKind::Symbol(SymbolKind::Equals) => self.parse_cond(),
             _ => panic!("Must assign array with ="),
         };
 
@@ -199,7 +199,7 @@ impl Parser {
         };
 
         let size = match self.get_token().kind {
-            TokenKind::Symbol(SymbolKind::LeftSqBracket) => self.parse_expr(),
+            TokenKind::Symbol(SymbolKind::LeftSqBracket) => self.parse_cond(),
             _ => panic!("array must have ["),
         };
 
@@ -228,6 +228,32 @@ impl Parser {
         Node::DotExpr { left, right }
     }
 
+    fn parse_cond(&mut self) -> Node {
+        info!("Parsing conditional");
+
+        let left = self.parse_expr();
+        let optok = self.peek_token();
+        if let Some(x) = optok {
+            let operator = match x.kind {
+                TokenKind::Symbol(SymbolKind::Greater) => Op::Greater,
+                TokenKind::Symbol(SymbolKind::GreaterEquals) => Op::GreaterEqual,
+                TokenKind::Symbol(SymbolKind::Less) => Op::Less,
+                TokenKind::Symbol(SymbolKind::LessEquals) => Op::LessEqual,
+                TokenKind::Symbol(SymbolKind::DoubleEquals) => Op::EqualTo,
+                _ => return left,
+            };
+            self.get_token(); // consume token
+            let right = self.parse_cond();
+            Node::BinaryExpr {
+                left: Box::new(left),
+                operator,
+                right: Box::new(right),
+            }
+        } else {
+            left
+        }
+    }
+
     fn parse_expr(&mut self) -> Node {
         info!("Parsing expresion");
 
@@ -237,11 +263,6 @@ impl Parser {
             let operator = match x.kind {
                 TokenKind::Symbol(SymbolKind::Plus) => Op::Plus,
                 TokenKind::Symbol(SymbolKind::Minus) => Op::Minus,
-                TokenKind::Symbol(SymbolKind::Greater) => Op::Greater,
-                TokenKind::Symbol(SymbolKind::GreaterEquals) => Op::GreaterEqual,
-                TokenKind::Symbol(SymbolKind::Less) => Op::Less,
-                TokenKind::Symbol(SymbolKind::LessEquals) => Op::LessEqual,
-                TokenKind::Symbol(SymbolKind::DoubleEquals) => Op::EqualTo,
                 _ => return left,
             };
             self.get_token(); // consume token
@@ -310,7 +331,7 @@ impl Parser {
             }
             TokenKind::Symbol(SymbolKind::LeftBracket) => {
                 self.get_token();
-                let expr = self.parse_expr();
+                let expr = self.parse_cond();
                 // TODO: verify bracket (needs error handling)
                 self.get_token(); // consume end bracket
                 expr
@@ -326,7 +347,7 @@ impl Parser {
         };
 
         let index = match self.get_token().kind {
-            TokenKind::Symbol(SymbolKind::LeftSqBracket) => self.parse_expr(),
+            TokenKind::Symbol(SymbolKind::LeftSqBracket) => self.parse_cond(),
             _ => panic!("array index must be specified with square brackets"),
         };
 
