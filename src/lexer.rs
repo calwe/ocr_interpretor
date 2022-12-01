@@ -327,7 +327,7 @@ mod tests {
 
     #[test]
     fn arithmetic() {
-        let mut lexer = Lexer::new("+= + - -=".to_string());
+        let mut lexer = Lexer::new("+= + - -= * /".to_string());
         let _ = lexer.lex();
         assert_eq!(
             lexer.token_kinds(),
@@ -336,6 +336,8 @@ mod tests {
                 TokenKind::Symbol(SymbolKind::Plus),
                 TokenKind::Symbol(SymbolKind::Minus),
                 TokenKind::Symbol(SymbolKind::MinusEqual),
+                TokenKind::Symbol(SymbolKind::Multiply),
+                TokenKind::Symbol(SymbolKind::Divide),
             ]
         );
     }

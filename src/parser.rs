@@ -83,7 +83,7 @@ impl Parser {
         info!("Parsing if statement");
 
         self.get_token(); // consume "if"
-        let expr = self.parse_expr();
+        let expr = self.parse_cond();
         self.get_token(); // consume "then"
         let then = self.parse_block().unwrap();
         let els = match self.get_token().kind {
@@ -102,7 +102,7 @@ impl Parser {
         info!("Parsing while statement");
 
         self.get_token(); // consume "while"
-        let expr = self.parse_expr();
+        let expr = self.parse_cond();
         let body = self.parse_block().unwrap();
         self.get_token(); // consume "endwhile"
 
@@ -139,7 +139,7 @@ impl Parser {
         info!("Parsing an argument");
 
         match self.peek_token().unwrap().kind {
-            _ => self.parse_expr(),
+            _ => self.parse_cond(),
         }
     }
 
@@ -154,7 +154,7 @@ impl Parser {
         // TODO: Verify equals
         self.get_token(); // consume '='
         let expr = match self.peek_token().unwrap().kind {
-            _ => self.parse_expr(),
+            _ => self.parse_cond(),
         };
         Node::Assign {
             ident,
@@ -172,13 +172,13 @@ impl Parser {
         };
 
         let index = match self.get_token().kind {
-            TokenKind::Symbol(SymbolKind::LeftSqBracket) => self.parse_expr(),
+            TokenKind::Symbol(SymbolKind::LeftSqBracket) => self.parse_cond(),
             _ => panic!("array must be indexed with ["),
         };
 
         self.get_token(); // consume '['
         let value = match self.get_token().kind {
-            TokenKind::Symbol(SymbolKind::Equals) => self.parse_expr(),
+            TokenKind::Symbol(SymbolKind::Equals) => self.parse_cond(),
             _ => panic!("Must assign array with ="),
         };
 
@@ -199,7 +199,7 @@ impl Parser {
         };
 
         let size = match self.get_token().kind {
-            TokenKind::Symbol(SymbolKind::LeftSqBracket) => self.parse_expr(),
+            TokenKind::Symbol(SymbolKind::LeftSqBracket) => self.parse_cond(),
             _ => panic!("array must have ["),
         };
 
@@ -228,6 +228,32 @@ impl Parser {
         Node::DotExpr { left, right }
     }
 
+    fn parse_cond(&mut self) -> Node {
+        info!("Parsing conditional");
+
+        let left = self.parse_expr();
+        let optok = self.peek_token();
+        if let Some(x) = optok {
+            let operator = match x.kind {
+                TokenKind::Symbol(SymbolKind::Greater) => Op::Greater,
+                TokenKind::Symbol(SymbolKind::GreaterEquals) => Op::GreaterEqual,
+                TokenKind::Symbol(SymbolKind::Less) => Op::Less,
+                TokenKind::Symbol(SymbolKind::LessEquals) => Op::LessEqual,
+                TokenKind::Symbol(SymbolKind::DoubleEquals) => Op::EqualTo,
+                _ => return left,
+            };
+            self.get_token(); // consume token
+            let right = self.parse_cond();
+            Node::BinaryExpr {
+                left: Box::new(left),
+                operator,
+                right: Box::new(right),
+            }
+        } else {
+            left
+        }
+    }
+
     fn parse_expr(&mut self) -> Node {
         info!("Parsing expresion");
 
@@ -237,11 +263,6 @@ impl Parser {
             let operator = match x.kind {
                 TokenKind::Symbol(SymbolKind::Plus) => Op::Plus,
                 TokenKind::Symbol(SymbolKind::Minus) => Op::Minus,
-                TokenKind::Symbol(SymbolKind::Greater) => Op::Greater,
-                TokenKind::Symbol(SymbolKind::GreaterEquals) => Op::GreaterEqual,
-                TokenKind::Symbol(SymbolKind::Less) => Op::Less,
-                TokenKind::Symbol(SymbolKind::LessEquals) => Op::LessEqual,
-                TokenKind::Symbol(SymbolKind::DoubleEquals) => Op::EqualTo,
                 _ => return left,
             };
             self.get_token(); // consume token
@@ -311,7 +332,7 @@ impl Parser {
             }
             TokenKind::Symbol(SymbolKind::LeftBracket) => {
                 self.get_token();
-                let expr = self.parse_expr();
+                let expr = self.parse_cond();
                 // TODO: verify bracket (needs error handling)
                 self.get_token(); // consume end bracket
                 expr
@@ -327,7 +348,7 @@ impl Parser {
         };
 
         let index = match self.get_token().kind {
-            TokenKind::Symbol(SymbolKind::LeftSqBracket) => self.parse_expr(),
+            TokenKind::Symbol(SymbolKind::LeftSqBracket) => self.parse_cond(),
             _ => panic!("array index must be specified with square brackets"),
         };
 
@@ -350,5 +371,482 @@ impl Parser {
         let tok = self.tokens.clone().pop();
         info!("Peek token: {:?}", tok);
         tok
+    }
+
+    #[cfg(test)]
+    pub fn parse_from_list(token_kinds: Vec<TokenKind>) -> Result<Node, ParserError> {
+        use crate::Position;
+
+        let tokens = token_kinds
+            .iter()
+            .map(|x| Token::new(x.clone(), Position::new(0, 0), 0))
+            .collect();
+
+        let mut parser = Self::new(tokens, String::new());
+
+        parser.parse()
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn primary_assign() {
+        let input = vec![
+            TokenKind::Ident("num".to_string()),
+            TokenKind::Symbol(SymbolKind::Equals),
+            TokenKind::Number(10),
+        ];
+
+        assert_eq!(
+            Parser::parse_from_list(input).unwrap(),
+            Node::Block(vec![Node::Assign {
+                ident: "num".to_string(),
+                value: Box::new(Node::Primary(Value::Number(10)))
+            }])
+        );
+    }
+
+    #[test]
+    fn binary_assign() {
+        let input = vec![
+            TokenKind::Ident("num".to_string()),
+            TokenKind::Symbol(SymbolKind::Equals),
+            TokenKind::Number(10),
+            TokenKind::Symbol(SymbolKind::Plus),
+            TokenKind::Number(5),
+        ];
+
+        assert_eq!(
+            Parser::parse_from_list(input).unwrap(),
+            Node::Block(vec![Node::Assign {
+                ident: "num".to_string(),
+                value: Box::new(Node::BinaryExpr {
+                    left: Box::new(Node::Primary(Value::Number(10))),
+                    operator: Op::Plus,
+                    right: Box::new(Node::Primary(Value::Number(5)))
+                })
+            }])
+        );
+    }
+
+    #[test]
+    fn nested_binary_assign() {
+        let input = vec![
+            TokenKind::Ident("num".to_string()),
+            TokenKind::Symbol(SymbolKind::Equals),
+            TokenKind::Number(10),
+            TokenKind::Symbol(SymbolKind::Plus),
+            TokenKind::Number(5),
+            TokenKind::Symbol(SymbolKind::Multiply),
+            TokenKind::Number(2),
+        ];
+
+        assert_eq!(
+            Parser::parse_from_list(input).unwrap(),
+            Node::Block(vec![Node::Assign {
+                ident: "num".to_string(),
+                value: Box::new(Node::BinaryExpr {
+                    left: Box::new(Node::Primary(Value::Number(10))),
+                    operator: Op::Plus,
+                    right: Box::new(Node::BinaryExpr {
+                        left: Box::new(Node::Primary(Value::Number(5))),
+                        operator: Op::Multiply,
+                        right: Box::new(Node::Primary(Value::Number(2)))
+                    })
+                })
+            }])
+        );
+    }
+
+    #[test]
+    fn nested_binary_assign_with_parens() {
+        let input = vec![
+            TokenKind::Ident("num".to_string()),
+            TokenKind::Symbol(SymbolKind::Equals),
+            TokenKind::Symbol(SymbolKind::LeftBracket),
+            TokenKind::Number(10),
+            TokenKind::Symbol(SymbolKind::Plus),
+            TokenKind::Number(5),
+            TokenKind::Symbol(SymbolKind::RightBracket),
+            TokenKind::Symbol(SymbolKind::Multiply),
+            TokenKind::Number(2),
+        ];
+
+        assert_eq!(
+            Parser::parse_from_list(input).unwrap(),
+            Node::Block(vec![Node::Assign {
+                ident: "num".to_string(),
+                value: Box::new(Node::BinaryExpr {
+                    left: Box::new(Node::BinaryExpr {
+                        left: Box::new(Node::Primary(Value::Number(10))),
+                        operator: Op::Plus,
+                        right: Box::new(Node::Primary(Value::Number(5)))
+                    }),
+                    operator: Op::Multiply,
+                    right: Box::new(Node::Primary(Value::Number(2)))
+                })
+            }])
+        );
+    }
+
+    #[test]
+    fn string_assign() {
+        let input = vec![
+            TokenKind::Ident("str".to_string()),
+            TokenKind::Symbol(SymbolKind::Equals),
+            TokenKind::String("hello world".to_string()),
+        ];
+
+        assert_eq!(
+            Parser::parse_from_list(input).unwrap(),
+            Node::Block(vec![Node::Assign {
+                ident: "str".to_string(),
+                value: Box::new(Node::Primary(Value::String("hello world".to_string())))
+            }])
+        );
+    }
+
+    #[test]
+    fn function_call() {
+        let input = vec![
+            TokenKind::Ident("print".to_string()),
+            TokenKind::Symbol(SymbolKind::LeftBracket),
+            TokenKind::String("hello world".to_string()),
+            TokenKind::Symbol(SymbolKind::RightBracket),
+        ];
+
+        assert_eq!(
+            Parser::parse_from_list(input).unwrap(),
+            Node::Block(vec![Node::FuncCall {
+                ident: "print".to_string(),
+                args: vec![Node::Primary(Value::String("hello world".to_string()))]
+            }])
+        );
+    }
+
+    #[test]
+    fn function_call_with_variable_ref() {
+        let input = vec![
+            TokenKind::Ident("print".to_string()),
+            TokenKind::Symbol(SymbolKind::LeftBracket),
+            TokenKind::Ident("str".to_string()),
+            TokenKind::Symbol(SymbolKind::RightBracket),
+        ];
+
+        assert_eq!(
+            Parser::parse_from_list(input).unwrap(),
+            Node::Block(vec![Node::FuncCall {
+                ident: "print".to_string(),
+                args: vec![Node::VariableRef("str".to_string())]
+            }])
+        );
+    }
+
+    #[test]
+    fn function_call_with_return_val() {
+        let input = vec![
+            TokenKind::Ident("in".to_string()),
+            TokenKind::Symbol(SymbolKind::Equals),
+            TokenKind::Ident("input".to_string()),
+            TokenKind::Symbol(SymbolKind::LeftBracket),
+            TokenKind::Symbol(SymbolKind::RightBracket),
+        ];
+
+        assert_eq!(
+            Parser::parse_from_list(input).unwrap(),
+            Node::Block(vec![Node::Assign {
+                ident: "in".to_string(),
+                value: Box::new(Node::FuncCall {
+                    ident: "input".to_string(),
+                    args: vec![]
+                })
+            }])
+        );
+    }
+
+    #[test]
+    fn if_statement() {
+        let input = vec![
+            TokenKind::Keyword(KeywordKind::If),
+            TokenKind::Number(10),
+            TokenKind::Symbol(SymbolKind::Greater),
+            TokenKind::Number(5),
+            TokenKind::Keyword(KeywordKind::Then),
+            TokenKind::Ident("print".to_string()),
+            TokenKind::Symbol(SymbolKind::LeftBracket),
+            TokenKind::String("hello world".to_string()),
+            TokenKind::Symbol(SymbolKind::RightBracket),
+            TokenKind::Keyword(KeywordKind::EndIf),
+        ];
+
+        assert_eq!(
+            Parser::parse_from_list(input).unwrap(),
+            Node::Block(vec![Node::IfExpr {
+                expr: Box::new(Node::BinaryExpr {
+                    left: Box::new(Node::Primary(Value::Number(10))),
+                    operator: Op::Greater,
+                    right: Box::new(Node::Primary(Value::Number(5)))
+                }),
+                then: Box::new(Node::Block(vec![Node::FuncCall {
+                    ident: "print".to_string(),
+                    args: vec![Node::Primary(Value::String("hello world".to_string()))]
+                }])),
+                els: Box::new(Node::Block(vec![]))
+            }])
+        );
+    }
+
+    #[test]
+    fn if_else_statement() {
+        let input = vec![
+            TokenKind::Keyword(KeywordKind::If),
+            TokenKind::Number(10),
+            TokenKind::Symbol(SymbolKind::Greater),
+            TokenKind::Number(5),
+            TokenKind::Keyword(KeywordKind::Then),
+            TokenKind::Ident("print".to_string()),
+            TokenKind::Symbol(SymbolKind::LeftBracket),
+            TokenKind::String("hello world".to_string()),
+            TokenKind::Symbol(SymbolKind::RightBracket),
+            TokenKind::Keyword(KeywordKind::Else),
+            TokenKind::Ident("print".to_string()),
+            TokenKind::Symbol(SymbolKind::LeftBracket),
+            TokenKind::String("goodbye world".to_string()),
+            TokenKind::Symbol(SymbolKind::RightBracket),
+            TokenKind::Keyword(KeywordKind::EndIf),
+        ];
+
+        assert_eq!(
+            Parser::parse_from_list(input).unwrap(),
+            Node::Block(vec![Node::IfExpr {
+                expr: Box::new(Node::BinaryExpr {
+                    left: Box::new(Node::Primary(Value::Number(10))),
+                    operator: Op::Greater,
+                    right: Box::new(Node::Primary(Value::Number(5)))
+                }),
+                then: Box::new(Node::Block(vec![Node::FuncCall {
+                    ident: "print".to_string(),
+                    args: vec![Node::Primary(Value::String("hello world".to_string()))]
+                }])),
+                els: Box::new(Node::Block(vec![Node::FuncCall {
+                    ident: "print".to_string(),
+                    args: vec![Node::Primary(Value::String("goodbye world".to_string()))]
+                }]))
+            }])
+        );
+    }
+
+    #[test]
+    fn while_loop() {
+        let input = vec![
+            TokenKind::Keyword(KeywordKind::While),
+            TokenKind::Number(10),
+            TokenKind::Symbol(SymbolKind::Greater),
+            TokenKind::Number(5),
+            TokenKind::Ident("print".to_string()),
+            TokenKind::Symbol(SymbolKind::LeftBracket),
+            TokenKind::String("hello world".to_string()),
+            TokenKind::Symbol(SymbolKind::RightBracket),
+            TokenKind::Keyword(KeywordKind::EndWhile),
+        ];
+
+        assert_eq!(
+            Parser::parse_from_list(input).unwrap(),
+            Node::Block(vec![Node::WhileStmt {
+                expr: Box::new(Node::BinaryExpr {
+                    left: Box::new(Node::Primary(Value::Number(10))),
+                    operator: Op::Greater,
+                    right: Box::new(Node::Primary(Value::Number(5)))
+                }),
+                body: Box::new(Node::Block(vec![Node::FuncCall {
+                    ident: "print".to_string(),
+                    args: vec![Node::Primary(Value::String("hello world".to_string()))]
+                }]))
+            }])
+        );
+    }
+
+    #[test]
+    fn conditional_order_of_operations() {
+        let input = vec![
+            TokenKind::Keyword(KeywordKind::If),
+            TokenKind::Number(10),
+            TokenKind::Symbol(SymbolKind::Plus),
+            TokenKind::Number(5),
+            TokenKind::Symbol(SymbolKind::Greater),
+            TokenKind::Number(5),
+            TokenKind::Keyword(KeywordKind::Then),
+            TokenKind::Ident("print".to_string()),
+            TokenKind::Symbol(SymbolKind::LeftBracket),
+            TokenKind::String("hello world".to_string()),
+            TokenKind::Symbol(SymbolKind::RightBracket),
+            TokenKind::Keyword(KeywordKind::EndIf),
+        ];
+
+        assert_eq!(
+            Parser::parse_from_list(input).unwrap(),
+            Node::Block(vec![Node::IfExpr {
+                expr: Box::new(Node::BinaryExpr {
+                    left: Box::new(Node::BinaryExpr {
+                        left: Box::new(Node::Primary(Value::Number(10))),
+                        operator: Op::Plus,
+                        right: Box::new(Node::Primary(Value::Number(5)))
+                    }),
+                    operator: Op::Greater,
+                    right: Box::new(Node::Primary(Value::Number(5)))
+                }),
+                then: Box::new(Node::Block(vec![Node::FuncCall {
+                    ident: "print".to_string(),
+                    args: vec![Node::Primary(Value::String("hello world".to_string()))]
+                }])),
+                els: Box::new(Node::Block(vec![]))
+            }])
+        );
+    }
+
+    #[test]
+    fn conditional_order_of_operations_2() {
+        let input = vec![
+            TokenKind::Keyword(KeywordKind::If),
+            TokenKind::Number(10),
+            TokenKind::Symbol(SymbolKind::Greater),
+            TokenKind::Number(5),
+            TokenKind::Symbol(SymbolKind::Plus),
+            TokenKind::Number(5),
+            TokenKind::Keyword(KeywordKind::Then),
+            TokenKind::Ident("print".to_string()),
+            TokenKind::Symbol(SymbolKind::LeftBracket),
+            TokenKind::String("hello world".to_string()),
+            TokenKind::Symbol(SymbolKind::RightBracket),
+            TokenKind::Keyword(KeywordKind::EndIf),
+        ];
+
+        assert_eq!(
+            Parser::parse_from_list(input).unwrap(),
+            Node::Block(vec![Node::IfExpr {
+                expr: Box::new(Node::BinaryExpr {
+                    left: Box::new(Node::Primary(Value::Number(10))),
+                    operator: Op::Greater,
+                    right: Box::new(Node::BinaryExpr {
+                        left: Box::new(Node::Primary(Value::Number(5))),
+                        operator: Op::Plus,
+                        right: Box::new(Node::Primary(Value::Number(5)))
+                    })
+                }),
+                then: Box::new(Node::Block(vec![Node::FuncCall {
+                    ident: "print".to_string(),
+                    args: vec![Node::Primary(Value::String("hello world".to_string()))]
+                }])),
+                els: Box::new(Node::Block(vec![]))
+            }])
+        );
+    }
+
+    #[test]
+    fn array_decl() {
+        let input = vec![
+            TokenKind::Keyword(KeywordKind::Array),
+            TokenKind::Ident("arr".to_string()),
+            TokenKind::Symbol(SymbolKind::LeftSqBracket),
+            TokenKind::Number(10),
+            TokenKind::Symbol(SymbolKind::RightSqBracket),
+        ];
+
+        assert_eq!(
+            Parser::parse_from_list(input).unwrap(),
+            Node::Block(vec![Node::ArrayAssign {
+                ident: "arr".to_string(),
+                size: Box::new(Node::Primary(Value::Number(10)))
+            }])
+        );
+    }
+
+    #[test]
+    fn array_assign_index() {
+        let input = vec![
+            TokenKind::Ident("arr".to_string()),
+            TokenKind::Symbol(SymbolKind::LeftSqBracket),
+            TokenKind::Number(10),
+            TokenKind::Symbol(SymbolKind::RightSqBracket),
+            TokenKind::Symbol(SymbolKind::Equals),
+            TokenKind::Number(5),
+        ];
+
+        assert_eq!(
+            Parser::parse_from_list(input).unwrap(),
+            Node::Block(vec![Node::ArrayAssingIndex {
+                ident: "arr".to_string(),
+                index: Box::new(Node::Primary(Value::Number(10))),
+                value: Box::new(Node::Primary(Value::Number(5)))
+            }])
+        );
+    }
+
+    #[test]
+    fn array_ref_index() {
+        let input = vec![
+            TokenKind::Ident("print".to_string()),
+            TokenKind::Symbol(SymbolKind::LeftBracket),
+            TokenKind::Ident("arr".to_string()),
+            TokenKind::Symbol(SymbolKind::LeftSqBracket),
+            TokenKind::Number(10),
+            TokenKind::Symbol(SymbolKind::RightSqBracket),
+            TokenKind::Symbol(SymbolKind::RightBracket),
+        ];
+
+        assert_eq!(
+            Parser::parse_from_list(input).unwrap(),
+            Node::Block(vec![Node::FuncCall {
+                ident: "print".to_string(),
+                args: vec![Node::ArrayRef {
+                    ident: "arr".to_string(),
+                    index: Box::new(Node::Primary(Value::Number(10)))
+                }]
+            }])
+        );
+    }
+
+    #[test]
+    fn variable_ref() {
+        let input = vec![
+            TokenKind::Ident("print".to_string()),
+            TokenKind::Symbol(SymbolKind::LeftBracket),
+            TokenKind::Ident("foo".to_string()),
+            TokenKind::Symbol(SymbolKind::RightBracket),
+        ];
+
+        assert_eq!(
+            Parser::parse_from_list(input).unwrap(),
+            Node::Block(vec![Node::FuncCall {
+                ident: "print".to_string(),
+                args: vec![Node::VariableRef("foo".to_string())]
+            }])
+        );
+    }
+
+    #[test]
+    fn dot_expr() {
+        let input = vec![
+            TokenKind::Ident("print".to_string()),
+            TokenKind::Symbol(SymbolKind::LeftBracket),
+            TokenKind::Ident("foo".to_string()),
+            TokenKind::Symbol(SymbolKind::Dot),
+            TokenKind::Ident("length".to_string()),
+            TokenKind::Symbol(SymbolKind::RightBracket),
+        ];
+
+        assert_eq!(
+            Parser::parse_from_list(input).unwrap(),
+            Node::Block(vec![Node::FuncCall {
+                ident: "print".to_string(),
+                args: vec![Node::DotExpr {
+                    left: "foo".to_string(),
+                    right: "length".to_string()
+                }]
+            }])
+        );
     }
 }
